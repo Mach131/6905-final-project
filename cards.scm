@@ -12,50 +12,60 @@ about the types of things that can be done with that card.
 ;;;     Card Representation
 #|  The low-level representation for a card. Keeps track of
 the associated components and their fields, maintaining the
-invariant that every component identifier is unique.
+invariant that every component identifier is unique. There
+are records for components and fields to allow them to be
+mutated without updating a card's entire component list.
 |#
 
+
+;; Cards
 (define-record-type c:card
     (c:%make-card comps)
     c:card?
-  (comps c:%card-get-components c:%card-set-components!))
+  (comps c:%card-components c:%card-set-components!))
 
-; for debugging
+;; Components
+(define-record-type c:component
+    (c:%make-component name fields)
+    c:component?
+  (name c:%component-name)
+  (fields c:%component-fields))
+
+;; Fields
+(define-record-type c:component-field
+    (c:%make-component-field name value)
+    c:component-field?
+  (name c:%component-field-name)
+  (value c:%component-field-value c:%component-field-set-value!))
+
+
+
+;; Printing functions for debugging
 (define (c:print-card card)
-  (write-line (list 'card: (c:%card-get-components card))))
+  (write (list 'card: 
+	       (map c:%print-component
+		    (c:%card-components card))))
+  (newline))
 
+(define (c:%print-component component)
+  (list (c:%component-name component)
+	(map c:%print-component-field
+	     (c:%component-fields component))))
 
-#|  Components and fields will be represented with certain
-list types; these are some syntactic functions.
-|#
-
-(define (c:component-field? object)
-  (and (pair? object)
-       (symbol? (car object))
-       (= (length object) 2)))
-(define c:component-field-name car)
-(define c:component-field-value cadr)
-
-(define (c:component? object)
-  (and (pair? object)
-       (symbol? (car object))
-       (alist? (cadr object))
-       (every c:component-field? (cadr object))))
-(define c:component-name car)
-(define c:component-fields cadr)
-
-(define (c:component-list? object)
-  (and (pair? object)
-       (every c:component? object)))
+(define (c:%print-component-field field)
+  (list (c:%component-field-name field)
+	(c:%component-field-value field)))
 
 ;;;     Card Instantiator
 #|  Creates a function that accepts a card collection and
 adds a card with the given components to it, allowing 
 multiple copies of a card to be created efficiently. 
-Component-list should be a list of components, each in the
-form returned by a function created using
-component-instantiator.
+Component-list should be a list of components.
 |#
+
+(define (c:component-list? object)
+  (and (list? object)
+       (every c:component? object)))
 
 (define (c:card-instantiator component-list)
   (guarantee c:component-list? component-list)
@@ -67,11 +77,9 @@ component-instantiator.
 
 ;;;     Component Instantiator
 #|  Creates a function that accepts an appropriate number of
-field values and creates a properly formatted list for input
-into card-instantiator. Component-name should be a symbol,
-and field-list should be a list of unique symbols naming
-each field. The resulting format is an alist:
-(component-name ((field value) (field value) ...))
+field values and creates a component with the provided fields.
+Component-name should be a symbol, and field-list should be a
+list of unique symbols naming each field.
 |#
 
 (define (c:field-name-list? object)
@@ -85,10 +93,11 @@ each field. The resulting format is an alist:
     (guarantee list? values)
     (if (= (length field-name-list) (length values))
 	(let ((field-list (map
-			   (lambda (name val) (list name val))
+			   (lambda (name val)
+			     (c:%make-component-field name val))
 			   field-name-list values)))
-	  (list component-name field-list))
-	(error "incorrect number of field values" values)))
+	  (c:%make-component component-name field-list))
+	(error "Incorrect number of field values:" values)))
   instantiate-component)
 
 ;;;     Card Functionality
@@ -96,37 +105,103 @@ each field. The resulting format is an alist:
 objects.
 |#
 
+;; Helper functions
+(define (c:%find-component-by-name component-list component-name)
+  (guarantee c:component-list? component-list)
+  (guarantee symbol? component-name)
+  (find (lambda (c)
+	  (eq? (c:%component-name c) component-name))
+	component-list))
+
+(define (c:component-field-list? object)
+  (and (list? object)
+       (every c:component-field? object)))
+
+(define (c:%find-field-by-name component-fields field-name)
+  (guarantee c:component-field-list? component-fields)
+  (guarantee symbol? field-name)
+  (find (lambda (f)
+	  (eq? (c:%component-field-name f) field-name))
+	component-fields))
+
 ;; Checks if the card has a component with the given name.
 (define (c:has-component? card component-name)
-  'todo)
+  (guarantee c:card? card)
+  (guarantee symbol? component-name)
+  (let ((component-list (c:%card-components card)))
+    (c:%find-component-by-name component-list component-name)))
 
 ;; Adds the given component to the card if one with the same
 ;;   name is not already present. Returns false if there
 ;;   was already a component of the same name.
 (define (c:add-component! card instantiated-component)
-  'todo)
+  (guarantee c:card? card)
+  (guarantee c:component? instantiated-component)
+  (if (c:has-component? card
+			(c:%component-name instantiated-component))
+      #f
+      (let ((component-list (c:%card-components card)))
+	(c:%card-set-components!
+	 card
+	 (cons instantiated-component component-list)))))
 
 ;; Removes a component with a given name from the card.
 ;;   Returns false if no such component was found.
 (define (c:remove-component! card component-name)
-  'todo)
+  (guarantee c:card? card)
+  (guarantee symbol? component-name)
+  (if (c:has-component? card component-name)
+      (let ((component-list (c:%card-components card)))
+	(c:%card-set-components!
+	 card
+	 (remove (lambda (component)
+		   (eq? (c:%component-name component)
+			component-name))
+		 component-list)))
+      #f))
 
 ;; Gets the value of a field within a given component.
 (define (c:get-field-value card component-name field-name)
-  'todo)
+  (guarantee c:card? card)
+  (guarantee symbol? component-name)
+  (guarantee symbol? field-name)
+  (if (c:has-component? card component-name)
+      (let* ((component-list (c:%card-components card))
+	     (component (c:%find-component-by-name component-list
+						   component-name))
+	     (field (c:%find-field-by-name (c:%component-fields component)
+					   field-name)))
+	(if field
+	    (c:%component-field-value field)
+	    (error "Field not found in card component:"
+		   card component-name field-name)))
+      (error "Component not found in card:" card component-name)))
 
 ;; Changes the value of a field within a given component.
 (define (c:set-field-value! card component-name field-name
 			    new-value)
-  'todo)
+  (guarantee c:card? card)
+  (guarantee symbol? component-name)
+  (guarantee symbol? field-name)
+  (if (c:has-component? card component-name)
+      (let* ((component-list (c:%card-components card))
+	     (component (c:%find-component-by-name component-list
+						   component-name))
+	     (field (c:%find-field-by-name (c:%component-fields component)
+					   field-name)))
+	(if field
+	    (c:%component-field-set-value! field new-value)
+	    (error "Field not found in card component:"
+		   card component-name field-name)))
+      (error "Component not found in card:" card component-name)))
 
 
-#|       Testing        |#
+#|       Testing (TODO: add test cases)
 ; dummy collection stuff
 (define (c:collection? x) #t)
 (define (c:add-cards! col cards)
   (for-each c:print-card cards))
-
+|#
 
 
 
