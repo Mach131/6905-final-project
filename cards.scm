@@ -47,7 +47,7 @@ mutated without updating a card's entire component list.
 
 ;; Printing functions for debugging
 (define (c:print-card card)
-  (write (list 'card: 
+  (write (list 'card:
 	       (map c:%print-component
 		    (c:%card-components card))))
   (newline))
@@ -63,8 +63,8 @@ mutated without updating a card's entire component list.
 
 ;;;     Card Instantiator
 #|  Creates a function that accepts a card collection and
-adds a card with the given components to it, allowing 
-multiple copies of a card to be created efficiently. 
+adds a card with the given components to it, allowing
+multiple copies of a card to be created efficiently.
 Component-list should be a list of components.
 |#
 
