@@ -9,6 +9,11 @@ has the same field, assumptions can be made more effectively
 about the types of things that can be done with that card.
 |#
 
+#|
+TODO: allow components to have type-checking predicates
+for their fields?
+|#
+
 ;;;     Card Representation
 #|  The low-level representation for a card. Keeps track of
 the associated components and their fields, maintaining the
@@ -196,12 +201,63 @@ objects.
       (error "Component not found in card:" card component-name)))
 
 
-#|       Testing (TODO: add test cases)
+#|       Testing
 ; dummy collection stuff
 (define (c:collection? x) #t)
-(define (c:add-cards! col cards)
-  (for-each c:print-card cards))
+(define test-coll '())
+(define (c:add-cards! coll cards)
+  (set! test-coll (append test-coll cards)))
+
+;; Card/component instantiators
+
+(define basic-comp
+  (c:component-instantiator 'basic
+			    '(rank suit)))
+(define flip-comp
+  (c:component-instantiator 'flip
+			    '(faceup)))
+
+((c:card-instantiator (list (basic-comp 5 'H)))
+ test-coll)
+((c:card-instantiator (list (basic-comp 2 'S)))
+ test-coll)
+(for-each c:print-card test-coll)
+        ; -> (card: ((basic ((rank 5) (suit h)))))
+        ; -> (card: ((basic ((rank 2) (suit s)))))
+
+
+;; Inspectors/mutators
+
+(define test-card (car test-coll))
+(c:has-component? test-card 'basic)
+        ; -> #t [or the component object]
+(c:has-component? test-card 'flip)
+        ; -> #f
+
+(c:add-component! test-card (flip-comp #t))
+(c:has-component? test-card 'basic)
+        ; -> #t [or the component object]
+(c:has-component? test-card 'flip)
+        ; -> #t [or the component object]
+
+(c:remove-component! test-card 'basic)
+(c:has-component? test-card 'basic)
+        ; -> #f
+(c:has-component? test-card 'flip)
+        ; -> #t [or the component object]
+
+(c:add-component! test-card (basic-comp 5 'H))
+(c:get-field-value test-card 'basic 'rank)
+        ; -> 5
+(c:get-field-value test-card 'basic 'suit)
+        ; -> 'H
+(c:get-field-value test-card 'flip 'faceup)
+        ; -> #t
+
+(c:set-field-value! test-card 'flip 'faceup #f)
+(c:get-field-value test-card 'flip 'faceup)
+        ; -> #f
+
+(c:print-card test-card)
+        ; -> (card: ((basic ((rank 5) (suit h))) (flip ((faceup #f)))))
 |#
-
-
-
