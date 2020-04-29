@@ -59,8 +59,6 @@ of the cards they currently contain.
 #|  Functions to facilitate inspection of the cards in a deck.
 |#
 
-
-
 ;;  Gets a list of the collection's cards (in order).
 (define (c:get-all-cards coll)
   (collection->cards coll))
@@ -74,7 +72,7 @@ of the cards they currently contain.
 	(let lp ((x 0))
 		(c:%add-cards! new-coll (list (list-ref (collection->cards coll) x)))
 		(if (= x (- n 1))
-				new-coll
+				(collection->cards new-coll)
 				(lp (+ x 1))))))
 
 ;;  Gets a list of the last n cards in the collection.
@@ -85,13 +83,16 @@ of the cards they currently contain.
 
 ;;  Gets a list of n randomly selected cards in the collection.
 (define (c:get-random-cards coll n)
-  'todo)
+  (let ((new-coll coll))
+		(c:shuffle-cards! new-coll)
+		(c:get-first-cards new-coll n)))
 
 ;;  Checks if the collection contains all of the given cards,
 ;;    requiring that duplicates be matched to separate cards.
 (define (c:contains-cards? coll cards)
 (let lp ((x 0))
-	(if (= (length (filter (lambda (y) (eq? (list-ref cards x) y)) (collection->cards coll))) 0)
+	(if (not (= (length (filter (lambda (y) (eq? (list-ref cards x) y)) (collection->cards coll)))
+							(length (filter (lambda (y) (eq? (list-ref cards x) y)) cards))))
 			#f
 			(if (< x (- (length cards) 1))
 				(lp (+ x 1))
@@ -110,18 +111,18 @@ collections.
  	(append! (collection->cards collection) cards)))
 
 (define (c:%remove-cards! collection cards)
-	(c:%collection-set-cards
-	collection
-		(filter
-			(lambda (x)
-				(not (c:contains-cards?
-					(cards->collection cards)
-					(list x))))
-			(collection->cards collection))))
+	'TODO)
 
+(define (remove-first cards card)
+		(let lp ((x 0))
+			(if (eq? (list-ref cards x) card)
+					(append! (c:get-first-cards (cards->collection cards) x)
+										(c:get-last-cards (cards->collection cards) ((length cards))))))
 ;;  Reverses the order of all cards in a collection.
 (define (c:reverse-cards! coll)
-  'todo)
+  (c:%collection-set-cards
+		coll
+		(reverse (collection->cards coll))))
 
 ;;  Randomizes the order of all cards in a collection.
 (define (c:shuffle-cards! coll)
@@ -177,13 +178,13 @@ collections.
 	(let ((cards (get-last-cards source-coll n)))
 	(move-cards! source dest-coll cards)))
 
-#|Testing
+;;Testing
 
 (define suits (list 'clubs 'hearts 'diamonds 'spades))
 (define suit-values (list 1 2 3 4))
 
-(define card-nums (list 'ace 'two 'three 'four 'five 'six 'seven 'eight 'nine 'ten 'jack 'queen 'king))
-(define card-values (list 1 2 3 4 5 6 7 8 9 10 11 12 13))
+(define card-nums (list 'ace 'ace))
+(define card-values (list 1 1))
 
  ;;Returns a 52 card deck (no jokers) where cards are ordered as above
  (define (create-standard-deck)
@@ -207,19 +208,31 @@ collections.
 
 (c:print-collection deck)
 
-(c:shuffle-cards! deck)
+(define card-nums (list 'ace 'ace))
+(define card-values (list 1 1))
+(define deck-short (create-standard-deck))
 
-(c:print-collection deck)
+(define first-3 (c:get-first-cards deck-short 3))
+(display (c:contains-cards? deck first-3))
+(newline)
+(display (c:contains-cards? deck (append first-3 first-3)))
 
-(c:move-cards! deck empty-deck (collection->cards deck))
+; (c:shuffle-cards! deck)
 
-(c:%add-cards! empty-deck (collection->cards deck))
+; (c:print-collection deck)
+;
+; (c:reverse-cards! deck)
+; (newline)
+; (c:print-collection deck)
 
-(collection->cards empty-deck)
-
-(c:contains-cards? deck (collection->cards empty-deck))
-
-(c:%remove-cards! empty-deck (collection->cards deck))
-
-(collection->cards empty-deck)
- |#
+; (c:move-cards! deck empty-deck (collection->cards deck))
+;
+; (c:%add-cards! empty-deck (collection->cards deck))
+;
+; (collection->cards empty-deck)
+;
+; (c:contains-cards? deck (collection->cards empty-deck))
+;
+; (c:%remove-cards! empty-deck (collection->cards deck))
+;
+; (collection->cards empty-deck)
