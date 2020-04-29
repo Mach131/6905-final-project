@@ -77,7 +77,7 @@ Component-list should be a list of components.
   (define (new-card-to collection)
     (guarantee c:collection? collection)
     (let ((new-card (c:%make-card component-list)))
-      (c:add-cards! collection (list new-card))))
+      (c:%add-cards! collection (list new-card))))
   new-card-to)
 
 ;;;     Component Instantiator
@@ -205,7 +205,7 @@ objects.
 ; dummy collection stuff
 (define (c:collection? x) #t)
 (define test-coll '())
-(define (c:add-cards! coll cards)
+(define (c:%add-cards! coll cards)
   (set! test-coll (append test-coll cards)))
 
 ;; Card/component instantiators
