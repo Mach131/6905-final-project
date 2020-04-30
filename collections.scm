@@ -16,43 +16,31 @@ fields of "in-play" cards.
 of the cards they currently contain.
 |#
 
-
 (define-record-type c:collection
     (c:%make-collection cards)
     c:collection?
-  (cards c:%collection-cards c:%collection-set-cards))
+  (cards c:%collection-cards c:%collection-set-cards!))
 
 
 ;; Printing function for debugging
 (define (c:print-collection coll)
-(write (list 'collection:
-				(map c:print-card
-					(c:%collection-cards coll))))
-					(newline))
+  (write-line 'start-collection:)
+  (for-each c:print-card
+	    (c:%collection-cards coll))
+  (write-line 'end-collection))
 
-
-(define (c:card-list? object)
-	(and (list? object)
-				(every c:card? object)))
 
 ;;;     Collection Instantiator
-(define (c:collection-instantiator card-list)
-	(guarantee c:card-list? card-list)
-	(c:%make-collection card-list))
+#|  Makes a new empty collection.
+|#
 
-(define (c:make-collection)
-  (c:collection-instantiator (list)))
-
-
-;;;			Conversions
-
-;;convert from cards to collection
-(define (cards->collection cards)
-	(c:collection-instantiator cards))
-
-;;convert from collection to cards
-(define (collection->cards collection)
-	(c:%collection-cards collection))
+(define (c:make-collection #!optional card-list)
+  (let ((use-cards
+	 (if (default-object? card-list)
+	     '()
+	     card-list)))
+    (guarantee c:card-list? use-cards)
+    (c:%make-collection use-cards)))
 
 
 ;;;     Card Access
@@ -61,42 +49,87 @@ of the cards they currently contain.
 
 ;;  Gets a list of the collection's cards (in order).
 (define (c:get-all-cards coll)
-  (collection->cards coll))
+  (guarantee c:collection? coll)
+  (c:%collection-cards coll))
 
 ;;  Gets a list of the first n cards in the collection.
 (define (c:get-first-cards coll n)
-(guarantee c:collection? coll)
-(guarantee number? n)
-(assert (> n -1))
-(let ((new-coll (c:make-collection)))
-	(let lp ((x 0))
-		(c:%add-cards! new-coll (list (list-ref (collection->cards coll) x)))
-		(if (= x (- n 1))
-				(collection->cards new-coll)
-				(lp (+ x 1))))))
+  (guarantee c:collection? coll)
+  (guarantee exact-nonnegative-integer? n)
+  (let ((cards (c:get-all-cards coll)))
+    (let ((c (min n (length cards))))
+      (list-head cards c))))
 
 ;;  Gets a list of the last n cards in the collection.
 (define (c:get-last-cards coll n)
-	(let ((new-coll coll))
-	(c:%remove-cards! new-coll (get-first-cards coll (- (length coll) (+ n 1))))))
-
+  (guarantee c:collection? coll)
+  (guarantee exact-nonnegative-integer? n)
+  (let ((cards (c:get-all-cards coll)))
+    (let ((c (max (- (length cards) n) 0)))
+      (list-tail cards c))))
 
 ;;  Gets a list of n randomly selected cards in the collection.
 (define (c:get-random-cards coll n)
-  (let ((new-coll coll))
-		(c:shuffle-cards! new-coll)
-		(c:get-first-cards new-coll n)))
+  (guarantee c:collection? coll)
+  (guarantee exact-nonnegative-integer? n)
+  (let ((cards (c:get-all-cards coll)))
+    (let lp ((n n) (c (length cards)) (root #t))
+      (if (or (= n 0)
+	      (= c 0))
+	  '()
+	  (let* ((new-idx (random c))
+		 (rest-idxs 
+		  (map (lambda (idx)         ; avoiding duplicates
+			 (if (>= idx new-idx)
+			     (+ idx 1)
+			     idx))
+		       (lp (- n 1) (- c 1) #f)))
+		 (combined-idxs (cons new-idx rest-idxs)))
+	    (if (not root)
+		combined-idxs
+		(map (lambda (idx) (list-ref cards idx))
+		     combined-idxs)))))))
 
 ;;  Checks if the collection contains all of the given cards,
 ;;    requiring that duplicates be matched to separate cards.
 (define (c:contains-cards? coll cards)
-(let lp ((x 0))
-	(if (not (= (length (filter (lambda (y) (eq? (list-ref cards x) y)) (collection->cards coll)))
-							(length (filter (lambda (y) (eq? (list-ref cards x) y)) cards))))
-			#f
-			(if (< x (- (length cards) 1))
-				(lp (+ x 1))
-				#t))))
+  (guarantee c:collection? coll)
+  (guarantee c:card-list? cards)
+  (let lp ((coll-cards (c:get-all-cards coll))
+	   (check-cards cards))
+    (if (null? check-cards)
+	#t
+	(let ((check-card (car check-cards)))
+	  (if (memq check-card coll-cards)
+	      (lp (delq check-card coll-cards)
+		  (cdr check-cards))
+	      #f)))))
+
+#|  I realized that the above should be all that's necessary
+assuming that we're only comparing cards by reference; if
+comparing by value is necessary, something like this might
+be used instead:
+
+(define (c:contains-cards? coll cards)
+  (guarantee c:collection? coll)
+  (guarantee c:card-list? cards)
+  (let lp ((coll-cards (c:get-all-cards coll))
+	   (check-cards cards))
+    (if (null? check-cards)
+	#t
+	(let ((check-card (car check-cards)))
+	  (let ((card-counter
+		 (lambda (c)
+		   (length (filter
+			    (lambda (card)
+			      (eq? check-card card))
+			    c)))))
+	    (if (>= (card-counter coll-cards)
+		    (card-counter check-cards))
+		(lp (delq check-card coll-cards)
+		    (delq check-card check-cards))
+		#f))))))
+|#
 
 ;;;     Card Transfer
 #|  Functions to facilitate movement of cards between or within
@@ -104,135 +137,70 @@ collections.
 |#
 
 ;; Helper functions (and interface for cards.scm)
-(define (c:%add-cards! collection cards)
-	(guarantee c:collection? collection)
-	(c:%collection-set-cards
-	 collection
- 	(append! (collection->cards collection) cards)))
+(define (c:%add-cards! coll cards)
+  (guarantee c:collection? coll)
+  (guarantee c:card-list? cards)
+  (let ((old-cards (c:%collection-cards coll)))
+    (c:%collection-set-cards! coll
+			      (append cards old-cards))))
 
-(define (c:%remove-cards! collection cards)
-	'TODO)
+(define (c:%remove-cards! coll cards)
+  (guarantee c:collection? coll)
+  (guarantee c:card-list? cards)
+  (let ((old-cards (c:%collection-cards coll)))
+    (c:%collection-set-cards! coll
+			      (remove (lambda (c)
+					(memq c cards))
+				      old-cards))))
 
-(define (remove-first cards card)
-		(let lp ((x 0))
-			(if (eq? (list-ref cards x) card)
-					(append! (c:get-first-cards (cards->collection cards) x)
-										(c:get-last-cards (cards->collection cards) ((length cards))))))
+
 ;;  Reverses the order of all cards in a collection.
 (define (c:reverse-cards! coll)
-  (c:%collection-set-cards
-		coll
-		(reverse (collection->cards coll))))
+  (guarantee c:collection? coll)
+  (let ((cards (c:%collection-cards coll)))
+    (c:%collection-set-cards! coll (reverse cards))))
 
 ;;  Randomizes the order of all cards in a collection.
 (define (c:shuffle-cards! coll)
-(if (not (= 0 (length (collection->cards coll))))
-(let ((new-collection coll))
-(let ((shuffled (c:make-collection))
-			(cards (collection->cards coll)))
-		(let lp ((x (length cards)))
-			(let ((card (get-card-at new-collection (random x))))
-			(c:%add-cards! shuffled (list card))
-			(c:%remove-cards! new-collection (list card)))
-			(if (= x 1)
-			(c:%collection-set-cards
-			 coll
-			 (collection->cards shuffled))
-			 (lp (- x 1))
-		))))))
-
-;;returns the card from collection at the given position
-(define (get-card-at collection position)
-	(assert (< position (length (collection->cards collection))))
-	(list-ref (collection->cards collection) position))
-
+  (guarantee c:collection? coll)
+  (let ((cards (c:%collection-cards coll)))
+    (let ((shuffled (c:get-random-cards coll (length cards))))
+      (c:%collection-set-cards! coll shuffled))))
 
 ;;  Removes the given cards from the source collection and adds
 ;;    them to the beginning of the destination. Uses the first
 ;;    copy of each card found in the source. Returns the number
 ;;    of cards successfully moved.
 (define (c:move-cards! source-coll dest-coll cards)
-	(guarantee c:collection? source-coll)
-	(guarantee c:collection? dest-coll)
-	(guarantee list? cards)
-	(c:%remove-cards! source-coll cards)
-	(c:%add-cards! dest-coll cards))
+  (guarantee c:collection? source-coll)
+  (guarantee c:collection? dest-coll)
+  (guarantee c:card-list? cards)
+  (let* ((old-source-cards (c:get-all-cards source-coll))
+	 (movable-cards
+	  (filter (lambda (c) (memq c old-source-cards))
+		  cards)))
+    (c:%remove-cards! source-coll movable-cards)
+    (c:%add-cards! dest-coll movable-cards)
+    (let ((new-source-cards (c:get-all-cards source-coll)))
+      (- (length old-source-cards)
+	 (length new-source-cards)))))
 
 ;;  Removes the first n cards from the source collection and adds
 ;;    them to the beginning of the destination. Returns the number
 ;;    of cards that were successfully moved.
-(define (c:move-first-cards! source-coll dest-coll cards)
-	(guarantee c:collection? source-coll)
-	(guarantee c:collection? dest-coll)
-	(assert (> n -1))
-	(let ((cards (get-first-cards source-coll n)))
-	(move-cards! source dest-coll cards)))
+(define (c:move-first-cards! source-coll dest-coll n)
+  (guarantee c:collection? source-coll)
+  (guarantee c:collection? dest-coll)
+  (guarantee exact-nonnegative-integer? n)
+  (let ((cards (c:get-first-cards source-coll n)))
+    (c:move-cards! source-coll dest-coll cards)))
 
 ;;  Removes the last n cards from the source collection and adds
 ;;    them to the beginning of the destination. Returns the number
 ;;    of cards that were successfully moved.
-(define (c:move-last-cards! source-coll dest-coll cards)
-	(guarantee c:collection? source-coll)
-	(guarantee c:collection? dest-coll)
-	(assert (> n -1))
-	(let ((cards (get-last-cards source-coll n)))
-	(move-cards! source dest-coll cards)))
-
-;;Testing
-
-(define suits (list 'clubs 'hearts 'diamonds 'spades))
-(define suit-values (list 1 2 3 4))
-
-(define card-nums (list 'ace 'ace))
-(define card-values (list 1 1))
-
- ;;Returns a 52 card deck (no jokers) where cards are ordered as above
- (define (create-standard-deck)
-	(let ((col (c:make-collection)))
-	(let lp ((suit-index 0))
-				(let lp2 ((num-index 0))
-					((c:card-instantiator (list
-						((c:component-instantiator 'num (list (list-ref card-nums num-index))) (list-ref card-values num-index))
-						((c:component-instantiator 'suit (list (list-ref suits suit-index))) (list-ref suit-values suit-index)))) col)
-
-						(if (< num-index (- (length card-nums) 1))
-									(lp2 (+ num-index 1))))
-		(if (< suit-index (- (length suits) 1))
-				(lp (+ suit-index 1))))
-	col))
-
-(define deck (create-standard-deck))
-
-(define empty-deck (c:make-collection))
-
-
-(c:print-collection deck)
-
-(define card-nums (list 'ace 'ace))
-(define card-values (list 1 1))
-(define deck-short (create-standard-deck))
-
-(define first-3 (c:get-first-cards deck-short 3))
-(display (c:contains-cards? deck first-3))
-(newline)
-(display (c:contains-cards? deck (append first-3 first-3)))
-
-; (c:shuffle-cards! deck)
-
-; (c:print-collection deck)
-;
-; (c:reverse-cards! deck)
-; (newline)
-; (c:print-collection deck)
-
-; (c:move-cards! deck empty-deck (collection->cards deck))
-;
-; (c:%add-cards! empty-deck (collection->cards deck))
-;
-; (collection->cards empty-deck)
-;
-; (c:contains-cards? deck (collection->cards empty-deck))
-;
-; (c:%remove-cards! empty-deck (collection->cards deck))
-;
-; (collection->cards empty-deck)
+(define (c:move-last-cards! source-coll dest-coll n)
+  (guarantee c:collection? source-coll)
+  (guarantee c:collection? dest-coll)
+  (guarantee exact-nonnegative-integer? n)
+  (let ((cards (c:get-last-cards source-coll n)))
+    (c:move-cards! source-coll dest-coll cards)))

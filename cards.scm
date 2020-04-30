@@ -29,12 +29,20 @@ mutated without updating a card's entire component list.
     c:card?
   (comps c:%card-components c:%card-set-components!))
 
+(define (c:card-list? object)
+  (and (list? object)
+       (every c:card? object)))
+
 ;; Components
 (define-record-type c:component
     (c:%make-component name fields)
     c:component?
   (name c:%component-name)
   (fields c:%component-fields))
+
+(define (c:component-list? object)
+  (and (list? object)
+       (every c:component? object)))
 
 ;; Fields
 (define-record-type c:component-field
@@ -43,6 +51,13 @@ mutated without updating a card's entire component list.
   (name c:%component-field-name)
   (value c:%component-field-value c:%component-field-set-value!))
 
+(define (c:component-field-list? object)
+  (and (list? object)
+       (every c:component-field? object)))
+
+(define (c:field-name-list? object)
+  (and (list? object)
+       (every symbol? object)))
 
 
 ;; Printing functions for debugging
@@ -68,10 +83,6 @@ multiple copies of a card to be created efficiently.
 Component-list should be a list of components.
 |#
 
-(define (c:component-list? object)
-  (and (list? object)
-       (every c:component? object)))
-
 (define (c:card-instantiator component-list)
   (guarantee c:component-list? component-list)
   (define (new-card-to collection)
@@ -86,10 +97,6 @@ field values and creates a component with the provided fields.
 Component-name should be a symbol, and field-list should be a
 list of unique symbols naming each field.
 |#
-
-(define (c:field-name-list? object)
-  (and (list? object)
-       (every symbol? object)))
 
 (define (c:component-instantiator component-name field-name-list)
   (guarantee symbol? component-name)
@@ -117,10 +124,6 @@ objects.
   (find (lambda (c)
 	  (eq? (c:%component-name c) component-name))
 	component-list))
-
-(define (c:component-field-list? object)
-  (and (list? object)
-       (every c:component-field? object)))
 
 (define (c:%find-field-by-name component-fields field-name)
   (guarantee c:component-field-list? component-fields)
