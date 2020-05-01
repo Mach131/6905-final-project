@@ -1,4 +1,8 @@
 ;;;Rummy500
+(define the-game
+      (c:make-game 'Rummy500 '() player-deck-types
+		   (create-decks) play condition))
+
 (define rummy-game)
 (define suits (list 'clubs 'hearts 'diamonds 'spades))
 (define suit-values (list 1 2 3 4))

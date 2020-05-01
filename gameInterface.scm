@@ -1,20 +1,25 @@
 ;;;Interface
 (load "./games.scm")
+(load "./utils.scm")
 ;; Global variables used once the game begins
-(define the-game)
+(define the-game #!default)
 (define game-began #f)
 
 ;; Initializes the game
+(define (reset-interface)
+  (set! the-game #!default)
+  (set! game-began #f))
+
 (define (play-game name)
+  (reset-interface)
   (let ((game-path
 	 (string-append "./gameVariants/" (string name) ".scm")))
   (if (file-exists? game-path)
       (begin
 	(load game-path)
-	(set! the-game
-	      (c:make-game name '() player-deck-types
-			   (create-decks) play condition))
-	(write-line "Please add players"))
+	(if (default-object? the-game)
+	    (write-line "Error: this variant hasn't defined a 'the-game' object.")
+	    (write-line "Game loaded; call add-player to add players.")))
       (write-line "I don't know that game yet"))))
 
 ;; Adds player to game

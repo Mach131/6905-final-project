@@ -47,6 +47,11 @@
   (war-prompt))
 (define condition 1)
 
+(define the-game
+  (c:make-game 'War '() player-deck-types
+	       (create-decks) play condition))
+
+
 ;;; Main loop
 
 (define (war-prompt)
