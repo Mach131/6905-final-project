@@ -76,8 +76,7 @@
 	       (write-line "War!")
 	       (play-cards p1 3)
 	       (play-cards p2 3)
-	       (do-war-round)))))))
-
+	       (do-round)))))))
 
 ;;; Helper functions
 
