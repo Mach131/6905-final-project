@@ -204,3 +204,92 @@ collections.
   (guarantee exact-nonnegative-integer? n)
   (let ((cards (c:get-last-cards source-coll n)))
     (c:move-cards! source-coll dest-coll cards)))
+
+#|        Test Cases
+
+;;  Variables for card making
+
+(define comp-basic
+  (c:component-instantiator 'basic
+			    '(rank)))
+
+;;  Making/Adding to Collections
+
+(define deck (c:make-collection))
+(c:print-collection deck)
+    ; -> [empty list of cards]
+(for-each
+ (lambda (r)
+   ((c:card-instantiator (list (comp-basic r)))
+    deck))
+ (iota 5))
+(c:print-collection deck)
+    ; -> [5 cards, numbered 0 through 4]
+
+
+;;  Card Accessors
+
+(for-each c:print-card
+	  (c:get-all-cards deck))
+    ; -> [similar result to print-collection]
+(for-each c:print-card
+	  (c:get-first-cards deck 2))
+    ; -> [4 and 3 cards]
+(for-each c:print-card
+	  (c:get-last-cards deck 3))
+    ; -> [2, 1, and 0 cards]
+(for-each c:print-card
+	  (c:get-random-cards deck 3))
+(for-each c:print-card
+	  (c:get-random-cards deck 3))
+    ; -> [likely different combinations of three cards]
+
+(define dupe-pile (c:make-collection))
+(define dupe-maker
+  (c:card-instantiator (list (comp-basic 'd))))
+(for-each
+ (lambda (x) (dupe-maker dupe-pile))
+ (iota 3))
+(c:print-collection dupe-pile)
+    ; -> [three copies of a "d" card]
+
+(c:contains-cards? deck
+		   (c:get-all-cards deck))
+    ; -> #t
+(c:contains-cards? deck
+		   (c:get-all-cards dupe-pile))
+    ; -> #f
+
+
+;;  Card Transfer
+
+(c:reverse-cards! deck)
+(c:print-collection deck)
+    ; -> [cards in ascending number order]
+(c:shuffle-cards! deck)
+(c:print-collection deck)
+    ; -> [cards in random order]
+
+(c:move-cards! deck dupe-pile
+	       (c:get-random-cards deck 2))
+    ; -> 2
+(c:print-collection deck)
+    ; -> [missing two random cards]
+(c:print-collection dupe-pile)
+    ; -> [has the two cards at the front]
+
+(c:move-first-cards! deck dupe-pile 4)
+    ; -> 3
+(c:print-collection deck)
+    ; -> [empty deck]
+(c:print-collection dupe-pile)
+    ; -> [has the other three cards at the front]
+
+(c:move-last-cards! dupe-pile deck 3)
+    ; -> 3
+(c:print-collection deck)
+    ; -> [has the three duplicates]
+(c:print-collection dupe-pile)
+    ; -> [still has the other five cards]
+
+|#
