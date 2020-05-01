@@ -6,11 +6,16 @@
 
 ;; Initializes the game
 (define (play-game name)
-  (cond ((eq? name 'rummy500)
-    (load "./gameVariants/rummy500.scm")
-    (set! the-game (c:make-game name (list) player-deck-types (create-decks) play condition))
-    "Please add players")
-    (else (write "I don't know that game yet"))))
+  (let ((game-path
+	 (string-append "./gameVariants/" (string name) ".scm")))
+  (if (file-exists? game-path)
+      (begin
+	(load game-path)
+	(set! the-game
+	      (c:make-game name '() player-deck-types
+			   (create-decks) play condition))
+	(write-line "Please add players"))
+      (write-line "I don't know that game yet"))))
 
 ;; Adds player to game
 (define (add-player name)
@@ -27,9 +32,11 @@
 (define (see-players)
   (map (lambda (x) (c:print-player x)) (c:game-players the-game)))
 
+#|  Tests
 (play-game 'rummy500)
 (add-player 'elizabeth)
 (add-player 'dan)
 (begin-game)
 (discard 1)
   ;;-> You must draw a card to continue.
+|#
