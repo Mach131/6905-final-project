@@ -20,6 +20,8 @@
 		(if (< suit-index (- (length suits) 1))
 				(lp (+ suit-index 1))))
 	col))
+
+;; Variation on printing cards for easier user readability
 (define (c:print-card card)
   (write 'card:)
 	       (map (lambda (x) (c:%print-comp x) (display " "))
@@ -37,6 +39,7 @@
 (define (create-decks)
 	(list (list'draw (create-draw-deck)) (list 'discard (c:make-collection))))
 
+;; Globals used for this implementation of rummy500 rounds
 (define first-player 0)
 (define current-player first-player)
 (define picked-up #f)
@@ -44,6 +47,8 @@
 (define must-play-card)
 
 (define player-deck-types (list 'hand 'played))
+
+;;;Starting call to play the game
 (define (play game)
 	(set! rummy-game game)
 	(c:game-deal game 7)
@@ -51,12 +56,13 @@
 	(newline)
 	(player-turn))
 
-
+;;; Stand in for the game variable condition for expansion of the game interface
 (define condition 1)
 
 (define (get-current-player)
 	(list-ref (c:game-players rummy-game) current-player))
 
+;;; Dialogue for a players turn
 (define (player-turn)
 	(set! picked-up #f)
 	(set! must-play #f)
@@ -84,14 +90,13 @@
 	(map see-players-played (c:game-players rummy-game)))
 
 (define (see-discarded)
-	(let ((store (c:make-collection (c:get-all-cards (c:get-game-deck rummy-game 'discard)))))
-	(c:reverse-cards! store)
-	(c:print-collection store)))
+	(c:print-collection (c:make-collection (c:get-all-cards (c:get-game-deck rummy-game 'discard)))))
 
 ;; Draw the desired number of cards from discard the last one must be played
 (define (draw-discarded number-of-cards)
 	(define (draw-helper card-number)
-	(c:move-last-cards!
+	(set! picked-up #t)
+	(c:move-first-cards!
 		(c:get-game-deck rummy-game 'discard)
 		(c:get-player-deck (get-current-player) 'hand)
 		card-number)
@@ -99,10 +104,12 @@
 			(set! must-play #t))
 		(if must-play
 			(set! must-play-card (car (c:get-first-cards (c:get-player-deck (get-current-player) 'hand) 1)))))
-	(if picked-up
-		(display "You already drew cards.")
-		(draw-helper number-of-cards))
-	(set! picked-up #t)
+	(if (< number-of-cards 1)
+		(display "You need to draw at least 1 card\n")
+		(if picked-up
+			(display "You already drew cards.")
+			(draw-helper number-of-cards)))
+
 	(display "Call discard or play-set to continue")
 	(newline))
 
@@ -115,7 +122,7 @@
 		(c:get-player-deck (get-current-player) 'hand)
 		1))
 	(set! picked-up #t)
-	(c:print-card (car (c:get-last-cards (c:get-player-deck (get-current-player) 'hand) 1)))
+	(c:print-card (car (c:get-first-cards (c:get-player-deck (get-current-player) 'hand) 1)))
 	(display "Call discard or play-set to continue")
 	(newline))
 
@@ -129,12 +136,79 @@
 					(list-ref
 						(c:get-all-cards (c:get-player-deck (get-current-player) 'hand)) x))
 				cards)))
+		(define (valid-set-move)
 		(c:move-cards!
 			(c:get-player-deck (get-current-player) 'hand)
 			(c:get-player-deck (get-current-player) 'played) my-cards)
 		(if (= (length (c:get-all-cards (c:get-player-deck (get-current-player) 'hand))) 0)
-			(display "Congratulations you have won!")
-			(display "Call play-set, or discard to continue")))))
+			(game-over)
+			(display "Call play-set, or discard to continue")))
+		(if (verify-set my-cards)
+			(valid-set-move)
+			(display "This is not a valid set of cards")))))
+
+;;; Handles the ending of the game
+;;; Can be easily expanded to add scoring for players
+(define (game-over)
+(display "Congratulations you have won!"))
+
+;;; Verifies that a list of cards forms a valid set
+(define (verify-set cards)
+	(if (< (length cards) 3)
+		#f
+		(let ((first-card (car cards)))
+			(let ((num (c:%component-fields (c:%find-component-by-name (c:%card-components first-card) 'num)))
+						(suit (c:%component-fields (c:%find-component-by-name (c:%card-components first-card) 'suit))))
+			(cond
+				((reduce-left boolean/and #t
+					(map
+						(lambda (x)
+							(eq? (c:%component-field-name (car num))
+							(c:%component-field-name (car (c:%component-fields
+								(c:%find-component-by-name
+									(c:%card-components x) 'num))))))
+							cards))
+							#t)
+					((reduce-left boolean/and #t
+						(map
+							(lambda (x)
+								(eq? (c:%component-field-name (car suit))
+								(c:%component-field-name (car (c:%component-fields
+									(c:%find-component-by-name
+										(c:%card-components x) 'suit))))))
+								cards))
+								(check-run cards))
+					(else #f))))))
+
+;;; Checks that a given set of cards all with the same suit form a run
+(define (check-run cards)
+	(let ((nums-list (list)))
+		(let lp ((x 0))
+			(set! nums-list (append! nums-list (list (filter (lambda (x) x) (map (lambda (card) (eq? (list-ref card-nums x)
+				(c:%component-field-name (car (c:%component-fields (c:%find-component-by-name (c:%card-components card) 'num)))))) cards)))))
+				(if (< x (- (length card-nums) 1))
+					(lp (+ x 1))))
+		(let ((started #f)
+					(run-length 0))
+					(let lp ((x 0))
+						(cond
+							((and
+								started
+								(= (length (list-ref nums-list x)) 0))
+								#f)
+							((and (not started) (= (length (list-ref nums-list x)) 0))
+								(if (< x (- (length card-nums) 1))
+									(lp (+ x 1))
+									#f))
+							(else
+								(set! run-length (+ run-length 1))
+								(set! started #t)
+								(if (= run-length (length cards))
+										#t
+										(if (< x (- (length card-nums) 1))
+											(lp (+ x 1))
+											#f))))))))
+
 
 ;; Discards the card at position card-num in the current players hand and initiates the next
 ;; players turn
