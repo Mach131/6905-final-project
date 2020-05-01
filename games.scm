@@ -23,33 +23,33 @@
 	(c:%make-game name players player-decks game-decks play end-condition))
 
 (define (c:get-game-deck game deck-name)
-	(guarantee game? game)
+	(guarantee c:game? game)
 	(guarantee symbol? deck-name)
 	(cadar (filter
 		(lambda (x) (eq? (car x) deck-name))
 		(c:%game-decks game))))
 
 (define (c:game-players game)
-	(guarantee game? game)
+	(guarantee c:game? game)
 	(c:%game-players game))
 
 (define (c:add-player game player)
-	(guarantee game? game)
-	(guarantee player? player)
+	(guarantee c:game? game)
+	(guarantee c:player? player)
 	(c:%add-game-players
 		game
 		(append! (c:game-players game) (list player))))
 
 (define (c:player-deck-types game)
-	(guarantee game? game)
+	(guarantee c:game? game)
 	(c:%player-deck-types game))
 
 (define (c:game-play game)
-	(guarantee game? game)
+	(guarantee c:game? game)
 	(c:%play-game game))
 
 (define (c:game-deal game number-of-cards)
-	(guarantee game? game)
+	(guarantee c:game? game)
 	(guarantee exact-nonnegative-integer? number-of-cards)
 	(c:shuffle-cards! (c:get-game-deck game 'draw))
 	(map (lambda (x) (c:add-to-hand x (c:get-game-deck game 'draw)

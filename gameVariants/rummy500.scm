@@ -4,7 +4,7 @@
 (define suit-values (list 1 2 3 4))
 
 (define card-nums (list 'ace 'two 'three 'four 'five 'six 'seven 'eight 'nine 'ten 'jack 'queen 'king))
-(define card-values (list 15 5 5 5 5 5 5 5 5 10 10 10 10))
+(define card-values (list 1 2 3 4 5 6 7 8 9 10 11 12 13))
 
  ;;Returns a 52 card deck (no jokers) where cards are ordered as above
  (define (create-draw-deck)
@@ -20,6 +20,18 @@
 		(if (< suit-index (- (length suits) 1))
 				(lp (+ suit-index 1))))
 	col))
+(define (c:print-card card)
+  (write 'card:)
+	       (map (lambda (x) (c:%print-comp x) (display " "))
+		    (c:%card-components card))
+				(newline))
+
+(define (c:%print-comp component)
+	(map c:%print-comp-field
+	     (c:%component-fields component)))
+
+(define (c:%print-comp-field field)
+ (write (c:%component-field-name field)))
 
 ;; Creates decks for rummy500 game
 (define (create-decks)
@@ -27,6 +39,9 @@
 
 (define first-player 0)
 (define current-player first-player)
+(define picked-up #f)
+(define must-play #f)
+(define must-play-card)
 
 (define player-deck-types (list 'hand 'played))
 (define (play game)
@@ -43,6 +58,8 @@
 	(list-ref (c:game-players rummy-game) current-player))
 
 (define (player-turn)
+	(set! picked-up #f)
+	(set! must-play #f)
 	(write (c:player-name (get-current-player)))
 	(display " it is your turn")
 	(newline)
@@ -67,30 +84,45 @@
 	(map see-players-played (c:game-players rummy-game)))
 
 (define (see-discarded)
-	(let ((store (cards->collection (collection->cards (c:get-game-deck rummy-game 'discard)))))
+	(let ((store (c:make-collection (c:get-all-cards (c:get-game-deck rummy-game 'discard)))))
 	(c:reverse-cards! store)
 	(c:print-collection store)))
 
 ;; Draw the desired number of cards from discard the last one must be played
-(define (draw-discarded number)
+(define (draw-discarded number-of-cards)
+	(define (draw-helper card-number)
 	(c:move-last-cards!
 		(c:get-game-deck rummy-game 'discard)
 		(c:get-player-deck (get-current-player) 'hand)
-		number)
-	(display "Call discard, or play-set to continue")
+		card-number)
+		(if (> card-number 1)
+			(set! must-play #t))
+		(if must-play
+			(set! must-play-card (car (c:get-first-cards (c:get-player-deck (get-current-player) 'hand) 1)))))
+	(if picked-up
+		(display "You already drew cards.")
+		(draw-helper number-of-cards))
+	(set! picked-up #t)
+	(display "Call discard or play-set to continue")
 	(newline))
 
 ;; Draw a new card from the deck
 (define (draw-new)
+	(if picked-up
+		(display "You already drew cards.")
 	(c:move-first-cards!
 		(c:get-game-deck rummy-game 'draw)
 		(c:get-player-deck (get-current-player) 'hand)
-		1)
-	(display "Call discard, or play-set to continue")
+		1))
+	(set! picked-up #t)
+	(c:print-card (car (c:get-last-cards (c:get-player-deck (get-current-player) 'hand) 1)))
+	(display "Call discard or play-set to continue")
 	(newline))
 
 ;; Allows the player to play a set of cards at the given positions in their hand
 (define (play-set . cards)
+	(if (not picked-up)
+		(display "You must draw a card before you can play a set")
 	(let ((my-cards
 			(map
 				(lambda (x)
@@ -99,14 +131,15 @@
 				cards)))
 		(c:move-cards!
 			(c:get-player-deck (get-current-player) 'hand)
-			(c:get-player-deck (get-current-player) 'played) my-cards))
+			(c:get-player-deck (get-current-player) 'played) my-cards)
 		(if (= (length (c:get-all-cards (c:get-player-deck (get-current-player) 'hand))) 0)
 			(display "Congratulations you have won!")
-			(display "Call play-set, or discard to continue")))
+			(display "Call play-set, or discard to continue")))))
 
 ;; Discards the card at position card-num in the current players hand and initiates the next
 ;; players turn
-(define (discard card-num)
+(define (discard card-number)
+	(define (discard-help card-num)
 	(c:move-cards!
 		(c:get-player-deck (get-current-player) 'hand)
 		(c:get-game-deck rummy-game 'discard)
@@ -115,3 +148,6 @@
 			(set! current-player (+ current-player 1))
 			(set! current-player 0))
 	(player-turn))
+	(if (not picked-up)
+		(display "You must draw a card to continue.")
+		(discard-help card-number)))

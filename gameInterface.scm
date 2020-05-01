@@ -26,3 +26,10 @@
 ;; For debugging lists all the players and their hands
 (define (see-players)
   (map (lambda (x) (c:print-player x)) (c:game-players the-game)))
+
+(play-game 'rummy500)
+(add-player 'elizabeth)
+(add-player 'dan)
+(begin-game)
+(discard 1)
+  ;;-> You must draw a card to continue.

@@ -28,27 +28,27 @@
 	(c:%make-player name (map (lambda (x) (list x (c:make-collection))) deck-types) 0))
 
 (define (c:player-name player)
-	(guarantee player? player)
+	(guarantee c:player? player)
 	(c:%player-name player))
 
 (define (c:increment-score player score)
-	(guarantee player? player)
+	(guarantee c:player? player)
 	(guarantee exact-nonnegative-integer? score)
 	(c:%player-set-score
 		player
 		(+ (c:%player-score) score)))
 
 (define (c:add-deck player name deck)
-	(guarantee player? player)
+	(guarantee c:player? player)
 	(guarantee symbol? name)
-	(guarantee collection? deck)
+	(guarantee c:collection? deck)
 	(c:%player-set-decks
 		player
 		(append! (c:%player-decks) (list name deck))))
 
 ;; Returns a players deck with the given name
 (define (c:get-player-deck player deck-name)
-	(guarantee player? player)
+	(guarantee c:player? player)
 	(guarantee symbol? deck-name)
 	(cadar (filter
 		(lambda (x) (eq? (car x) deck-name))
@@ -56,7 +56,7 @@
 
 ;; Adds cards to players hands
 (define (c:add-to-hand player source cards)
-	(guarantee player? player)
-	(guarantee collection? source)
+	(guarantee c:player? player)
+	(guarantee c:collection? source)
 	(guarantee list? cards)
 	(c:move-cards! source (c:get-player-deck player 'hand) cards))
