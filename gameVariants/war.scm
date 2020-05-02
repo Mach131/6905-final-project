@@ -36,7 +36,7 @@
   (list (list 'main (create-draw-deck))))
 (define (play)
   (set! war-game the-game)
-  (c:game-deal war-game 'main 'deck 26)
+  (c:game-deal! war-game 'main 'deck 26)
   (newline)
   (war-prompt))
 (define condition 1)

@@ -6,12 +6,12 @@
 (define game-began #f)
 
 ;; Initializes the game
-(define (reset-interface)
+(define (reset-interface!)
   (set! the-game #!default)
   (set! game-began #f))
 
 (define (play-game name)
-  (reset-interface)
+  (reset-interface!)
   (let ((game-path
 	 (string-append "./gameVariants/" (string name) ".scm")))
   (if (file-exists? game-path)
@@ -19,7 +19,8 @@
 	(load game-path)
 	(if (default-object? the-game)
 	    (write-line "Error: this variant hasn't defined a 'the-game' object.")
-	    (write-line "Game loaded; call add-player to add players.")))
+	    (print "Game loaded; call add-player to add players, "
+		   "and then begin-game when you're ready.")))
       (write-line "I don't know that game yet"))))
 
 ;; Adds player to game
@@ -30,7 +31,7 @@
 
 ;; Starts game players are no longer able to be added
 (define (begin-game)
-  (let ((game-start-proc (c:game-play the-game)))
+  (let ((game-start-proc (c:game-play! the-game)))
     (if game-start-proc
 	(begin
 	  (set! game-began #t)

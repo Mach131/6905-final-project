@@ -64,7 +64,7 @@
   (guarantee c:game? game)
   (c:%player-deck-types game))
 
-(define (c:game-play game)
+(define (c:game-play! game)
   (guarantee c:game? game)
   (let ((players (c:game-players game))
 	(min-players (c:%game-min-players game)))
@@ -79,7 +79,7 @@
 
 ;;; Utility functions
 
-(define (c:game-deal game game-deck-type player-deck-type number-of-cards)
+(define (c:game-deal! game game-deck-type player-deck-type number-of-cards)
   (guarantee c:game? game)
   (guarantee symbol? game-deck-type)
   (guarantee symbol? player-deck-type)
@@ -87,9 +87,9 @@
   (let ((game-deck (c:get-game-deck game game-deck-type)))
     (c:shuffle-cards! game-deck)
     (for-each (lambda (player)
-		(c:give-to-player player
-				  player-deck-type
-				  game-deck
-				  (c:get-first-cards game-deck number-of-cards)))
+		(c:give-to-player! player
+				   player-deck-type
+				   game-deck
+				   (c:get-first-cards game-deck number-of-cards)))
 	      (c:game-players game))))
 
