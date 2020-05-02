@@ -34,22 +34,17 @@
   (list 'deck 'played 'captures))
 (define (create-decks)
   (list (list 'main (create-draw-deck))))
-(define (play game)
-  (set! war-game game)
-  (let ((main-deck (c:get-game-deck war-game 'main))
-	(players (c:game-players war-game)))
-    (c:shuffle-cards! main-deck)
-    (for-each
-     (lambda (player)
-       (c:move-first-cards! main-deck (c:get-player-deck player 'deck) 26))
-     players))
+(define (play)
+  (set! war-game the-game)
+  (c:game-deal war-game 'main 'deck 26)
   (newline)
   (war-prompt))
 (define condition 1)
 
 (define the-game
-  (c:make-game 'War '() player-deck-types
-	       (create-decks) play condition))
+  (c:make-game 'War
+	       2 2 player-deck-types
+	       (create-decks) play))
 
 
 ;;; Main loop

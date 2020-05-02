@@ -18,11 +18,7 @@
 				(c:%player-decks player))
 				(newline))
 
-(define (c:make-player name)
-	(guarantee symbol? name)
-	(c:%make-player name (list (list 'hand (c:make-collection))) 0))
-
-(define (c:make-player-with name deck-types)
+(define (c:make-player name deck-types)
 	(guarantee symbol? name)
 	(guarantee list? deck-types)
 	(c:%make-player name (map (lambda (x) (list x (c:make-collection))) deck-types) 0))
@@ -54,9 +50,11 @@
 		(lambda (x) (eq? (car x) deck-name))
 		(c:%player-decks player))))
 
-;; Adds cards to players hands
-(define (c:add-to-hand player source cards)
+;; Adds cards to players decks
+(define (c:give-to-player player player-deck-type source cards)
 	(guarantee c:player? player)
+	(guarantee symbol? player-deck-type)
 	(guarantee c:collection? source)
 	(guarantee list? cards)
-	(c:move-cards! source (c:get-player-deck player 'hand) cards))
+	(let ((player-deck (c:get-player-deck player player-deck-type)))
+	  (c:move-cards! source player-deck cards)))

@@ -26,12 +26,16 @@
 (define (add-player name)
   (if game-began
     "The game has already begun. Try adding players when this game is over."
-  (c:add-player the-game (c:make-player-with name (c:player-deck-types the-game)))))
+  (c:add-player! the-game name)))
 
 ;; Starts game players are no longer able to be added
 (define (begin-game)
-  (set! game-began #t)
-  ((c:game-play the-game) the-game))
+  (let ((game-start-proc (c:game-play the-game)))
+    (if game-start-proc
+	(begin
+	  (set! game-began #t)
+	  (game-start-proc))
+	'not-started)))
 
 ;; For debugging lists all the players and their hands
 (define (see-players)
