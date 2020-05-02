@@ -28,34 +28,31 @@
 
 ;;; Game interface
 
-(define war-game)
 ; player-deck-types
 (define player-deck-types
   (list 'deck 'played 'captures))
-(define (create-decks)
+(define game-decks
   (list (list 'main (create-draw-deck))))
-(define (play)
-  (set! war-game the-game)
-  (c:game-deal! war-game 'main 'deck 26)
+(define (start-proc)
+  (c:game-deal! the-game 'main 'deck 26)
   (newline)
   (war-prompt))
-(define condition 1)
 
 (define the-game
   (c:make-game 'War
 	       2 2 player-deck-types
-	       (create-decks) play))
+	       game-decks start-proc))
 
 
 ;;; Main loop
 
 (define (war-prompt)
-  (for-each print-player-stats (c:game-players war-game))
+  (for-each print-player-stats (c:game-players the-game))
   (write-line "Call do-round to do the next round"))
 
 (define (do-round)
-  (let ((p1 (car (c:game-players war-game)))
-	(p2 (cadr (c:game-players war-game))))
+  (let ((p1 (car (c:game-players the-game)))
+	(p2 (cadr (c:game-players the-game))))
     (let ((p1-play (play-cards p1 1))
 	  (p2-play (play-cards p2 1)))
       (write-line (string-append (string (c:player-name p1)) " played "
@@ -96,8 +93,8 @@
     (car (c:get-first-cards played 1))))
 
 (define (capture-cards player)
-  (let ((p1 (car (c:game-players war-game)))
-	(p2 (cadr (c:game-players war-game))))
+  (let ((p1 (car (c:game-players the-game)))
+	(p2 (cadr (c:game-players the-game))))
     (let ((p1-plays (c:get-player-deck p1 'played))
 	  (p2-plays (c:get-player-deck p2 'played))
 	  (caps (c:get-player-deck player 'captures)))
