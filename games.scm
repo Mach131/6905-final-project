@@ -24,8 +24,10 @@
 		    (c:%game-decks game))))
   (newline))
 
+#|
 (define (c:make-game name players player-decks game-decks play end-condition)
   (c:%make-game name players player-decks game-decks play end-condition))
+|#
 
 (define (c:make-game name
 		     min-players max-players player-deck-types
