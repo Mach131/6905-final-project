@@ -14,6 +14,7 @@
   (reset-interface!)
   (let ((game-path
 	 (string-append "./gameVariants/" (string name) ".scm")))
+	 (display game-path)
   (if (file-exists? game-path)
       (begin
 	(load game-path)

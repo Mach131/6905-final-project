@@ -24,11 +24,6 @@
 		    (c:%game-decks game))))
   (newline))
 
-#|
-(define (c:make-game name players player-decks game-decks play end-condition)
-  (c:%make-game name players player-decks game-decks play end-condition))
-|#
-
 (define (c:make-game name
 		     min-players max-players player-deck-types
 		     game-decks start-proc)
@@ -36,7 +31,7 @@
 		min-players max-players '()
 		player-deck-types
 		game-decks start-proc))
-		     
+
 
 (define (c:get-game-deck game deck-name)
   (guarantee c:game? game)
@@ -94,4 +89,4 @@
 				   game-deck
 				   (c:get-first-cards game-deck number-of-cards)))
 	      (c:game-players game))))
-
+OB

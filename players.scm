@@ -1,4 +1,4 @@
-(load "./collections.scm")
+OAOA(load "./collections.scm")
 
 (define-record-type c:players
     (c:%make-player name decks attributes)

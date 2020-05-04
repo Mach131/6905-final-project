@@ -1,10 +1,5 @@
 ;;;Rummy500
-(define the-game
-  (c:make-game 'Rummy500
-	       2 #f player-deck-types
-	       (create-decks) play))
 
-(define rummy-game the-game)
 (define suits (list 'clubs 'hearts 'diamonds 'spades))
 (define suit-values (list 1 2 3 4))
 
@@ -19,7 +14,7 @@
 	((c:card-instantiator (list
 			       ((c:component-instantiator 'num (list (list-ref card-nums num-index))) (list-ref card-values num-index))
 			       ((c:component-instantiator 'suit (list (list-ref suits suit-index))) (list-ref suit-values suit-index)))) col)
-	
+
 	(if (< num-index (- (length card-nums) 1))
 	    (lp2 (+ num-index 1))))
       (if (< suit-index (- (length suits) 1))
@@ -55,16 +50,21 @@
 
 ;;;Starting call to play the game
 (define (play)
-  (c:game-deal! rummy-game 'draw 'hand 7)
-  (c:move-first-cards! (c:get-game-deck rummy-game 'draw) (c:get-game-deck rummy-game 'discard) 1)
+  (c:game-deal! the-game 'draw 'hand 7)
+  (c:move-first-cards! (c:get-game-deck the-game 'draw) (c:get-game-deck the-game 'discard) 1)
   (newline)
   (player-turn))
+
+(define the-game
+  (c:make-game 'Rummy500
+	       2 #f player-deck-types
+	       (create-decks) play))
 
 ;;; Stand in for the game variable condition for expansion of the game interface
 (define condition 1)
 
 (define (get-current-player)
-  (list-ref (c:game-players rummy-game) current-player))
+  (list-ref (c:game-players the-game) current-player))
 
 ;;; Dialogue for a players turn
 (define (player-turn)
@@ -91,17 +91,17 @@
   (newline))
 
 (define (see-all-played-cards)
-  (map see-players-played (c:game-players rummy-game)))
+  (map see-players-played (c:game-players the-game)))
 
 (define (see-discarded)
-  (c:print-collection (c:make-collection (c:get-all-cards (c:get-game-deck rummy-game 'discard)))))
+  (c:print-collection (c:make-collection (c:get-all-cards (c:get-game-deck the-game 'discard)))))
 
 ;; Draw the desired number of cards from discard the last one must be played
 (define (draw-discarded number-of-cards)
   (define (draw-helper card-number)
     (set! picked-up #t)
     (c:move-first-cards!
-     (c:get-game-deck rummy-game 'discard)
+     (c:get-game-deck the-game 'discard)
      (c:get-player-deck (get-current-player) 'hand)
      card-number)
     (if (> card-number 1)
@@ -113,7 +113,7 @@
       (if picked-up
 	  (display "You already drew cards.")
 	  (draw-helper number-of-cards)))
-  
+
   (display "Call discard or play-set to continue")
   (newline))
 
@@ -122,7 +122,7 @@
   (if picked-up
       (display "You already drew cards.")
       (c:move-first-cards!
-       (c:get-game-deck rummy-game 'draw)
+       (c:get-game-deck the-game 'draw)
        (c:get-player-deck (get-current-player) 'hand)
        1))
   (set! picked-up #t)
@@ -220,13 +220,12 @@
 	(define (discard-help card-num)
 	  (c:move-cards!
 	   (c:get-player-deck (get-current-player) 'hand)
-	   (c:get-game-deck rummy-game 'discard)
+	   (c:get-game-deck the-game 'discard)
 	   (list (list-ref (c:get-all-cards (c:get-player-deck (get-current-player) 'hand)) card-num)))
-	  (if (< current-player (- (length (c:game-players rummy-game)) 1))
+	  (if (< current-player (- (length (c:game-players the-game)) 1))
 	      (set! current-player (+ current-player 1))
 	      (set! current-player 0))
 	  (player-turn))
 	(if (not picked-up)
 	    (display "You must draw a card to continue.")
 	    (discard-help card-number)))
-
